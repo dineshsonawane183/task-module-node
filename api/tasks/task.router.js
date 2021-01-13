@@ -4,7 +4,11 @@ const router = app.Router();
 var dateFormat = require('dateformat');
 //get All tasks
 router.get("/", (req, res) => {
-    pool.query('select * from task', (err, data) => {
+    let off = req.query.offset?parseInt(req.query.offset):6;
+    let limit = req.query.limit?parseInt(req.query.limit):20;
+    const firstParam = !req.query.limit ? 0 :limit * off;  
+    
+    pool.query('select * from task limit ?,?', [firstParam,off] ,(err, data) => {
         if (err) {
             res.status(400).json({ msg: "something went wrong" });
         } else {
@@ -13,10 +17,20 @@ router.get("/", (req, res) => {
 
     })
 });
+router.get("/totaltasks", (req, res) => {
+    
+    pool.query('select count(*) as total from task limit 1' ,(err, data) => {
+        if (err) {
+            res.status(400).json({ msg: "something went wrong" });
+        } else {
+            res.status(200).json(data);
+        }
+
+    })
+});
 
 //create task
 router.post("/", (req, res) => {
-    console.log(req.body);
     const arr = [
         req.body.name,
         req.body.description,
@@ -24,7 +38,6 @@ router.post("/", (req, res) => {
         req.body.assignedTo,
         dateFormat(new Date(req.body.due_date),'yyyy-mm-dd'),
     ];
-    console.log(arr)
     pool.query(
         `insert into task (name, description, status, assignedTo, due_date) values(?,?,?,?,?);`,
         arr,
